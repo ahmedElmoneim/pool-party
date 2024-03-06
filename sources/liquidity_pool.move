@@ -210,7 +210,34 @@ module overmind::liquidity_pool {
         coin_b: Coin<CoinB>,
         ctx: &mut TxContext
     ): Coin<LPCoin<CoinA, CoinB>> {
-        
+        // Placeholder logic for creating a liquidity pool
+        let initial_liquidity_a = coin_a;
+        let initial_liquidity_b = coin_b;
+
+        // Ensure that the initial liquidity is above the minimum required
+        assert(initial_liquidity_a > 0, 0x1);
+        assert(initial_liquidity_b > 0, 0x2);
+
+        // Calculate the initial LP coins to mint
+        let lp_coins_to_mint = sqrt(initial_liquidity_a * initial_liquidity_b) - 1000;
+
+        // Mint the initial LP coins and distribute them
+        mint_lp_coins(lp_coins_to_mint, ctx.sender, ctx, &mut lp_coin_supply);
+
+        // Create and initialize the liquidity pool object
+        let liquidity_pool = LiquidityPool {
+            id: get_next_uid(),
+            coin_a_balance: initial_liquidity_a,
+            coin_b_balance: initial_liquidity_b,
+            lp_coin_supply: lp_coins_to_mint,
+            initial_lp_coin_reserve: 1000,
+        };
+
+        // Add the liquidity pool to storage
+        move_to(liquidity_pool.id, liquidity_pool);
+
+        // Return the minted LP coins
+        return lp_coins_to_mint;
     }
 
     /* 
@@ -232,7 +259,26 @@ module overmind::liquidity_pool {
         pool: &mut LiquidityPool<CoinA, CoinB>,
         ctx: &mut TxContext
     ): Coin<LPCoin<CoinA, CoinB>> {
+         // Placeholder logic for supplying liquidity
+        assert(coin_a > 0, 0x1);
+        assert(coin_b > 0, 0x2);
 
+        // Calculate LP coins to mint based on the provided liquidity
+        let lp_coins_to_mint = min(
+            coin_a * pool.lp_coin_supply / pool.coin_a_balance,
+            coin_b * pool.lp_coin_supply / pool.coin_b_balance
+        );
+
+        // Mint the LP coins and distribute them to the liquidity provider
+        mint_lp_coins(lp_coins_to_mint, ctx.sender, ctx, &mut pool.lp_coin_supply);
+
+        // Update the liquidity pool reserves
+        pool.coin_a_balance += coin_a;
+        pool.coin_b_balance += coin_b;
+
+        // Return the minted LP coins
+        return lp_coins_to_mint;
+        
     }
 
     /* 
@@ -250,7 +296,22 @@ module overmind::liquidity_pool {
         pool: &mut LiquidityPool<CoinA, CoinB>,
         ctx: &mut TxContext
     ): (Coin<CoinA>, Coin<CoinB>) {
-        
+        // Placeholder logic for removing liquidity
+        assert(lp_coins_to_redeem > 0, 0x3);
+
+        // Calculate the amount of each coin to return based on LP coins redeemed
+        let amount_coin_a = lp_coins_to_redeem * pool.coin_a_balance / pool.lp_coin_supply;
+        let amount_coin_b = lp_coins_to_redeem * pool.coin_b_balance / pool.lp_coin_supply;
+
+        // Burn the redeemed LP coins
+        burn_lp_coins(lp_coins_to_redeem, ctx.sender, ctx, &mut pool.lp_coin_supply);
+
+        // Update the liquidity pool reserves
+        pool.coin_a_balance -= amount_coin_a;
+        pool.coin_b_balance -= amount_coin_b;
+
+        // Return the two coins being removed from the liquidity pool
+        return (amount_coin_a, amount_coin_b);
     }
 
     /*
@@ -270,7 +331,24 @@ module overmind::liquidity_pool {
         min_amount_coin_b_out: u64,
         ctx: &mut TxContext
     ): Coin<CoinB> {
-        
+        // Placeholder logic for swapping exact CoinA for CoinB
+        assert(coin_a_in > 0, 0x1);
+
+        // Calculate optimal amount of CoinB to receive
+        let optimal_amount_coin_b_out = pool.coin_b_balance * coin_a_in / pool.coin_a_balance;
+
+        // Ensure slippage is within acceptable limits
+        assert(
+            optimal_amount_coin_b_out >= min_amount_coin_b_out,
+            ESlippageLimitExceeded
+        );
+
+        // Update liquidity pool reserves
+        pool.coin_a_balance += coin_a_in;
+        pool.coin_b_balance -= optimal_amount_coin_b_out;
+
+        // Return the amount of CoinB received
+        return optimal_amount_coin_b_out;
     }
 
     /*
@@ -290,7 +368,24 @@ module overmind::liquidity_pool {
         min_amount_coin_a_out: u64,
         ctx: &mut TxContext
     ): Coin<CoinA> {
-        
+        // Placeholder logic for swapping exact CoinB for CoinA
+        assert(coin_b_in > 0, 0x2);
+
+        // Calculate optimal amount of CoinA to receive
+        let optimal_amount_coin_a_out = pool.coin_a_balance * coin_b_in / pool.coin_b_balance;
+
+        // Ensure slippage is within acceptable limits
+        assert(
+            optimal_amount_coin_a_out >= min_amount_coin_a_out,
+            ESlippageLimitExceeded
+        );
+
+        // Update liquidity pool reserves
+        pool.coin_b_balance += coin_b_in;
+        pool.coin_a_balance -= optimal_amount_coin_a_out;
+
+        // Return the amount of CoinA received
+        return optimal_amount_coin_a_out;
     }
 
     /*
@@ -310,7 +405,24 @@ module overmind::liquidity_pool {
         pool: &mut LiquidityPool<CoinA, CoinB>,
         ctx: &mut TxContext
     ): Coin<CoinB> {
-        
+        // Placeholder logic for swapping CoinA for exact CoinB
+        assert(*max_coin_a_in > 0, 0x1);
+
+        // Calculate optimal amount of CoinB to receive
+        let optimal_amount_coin_b_out = pool.coin_b_balance * max_coin_a_in / pool.coin_a_balance;
+
+        // Ensure slippage is within acceptable limits
+        assert(
+            optimal_amount_coin_b_out <= amount_coin_b_out,
+            ESlippageLimitExceeded
+        );
+
+        // Update liquidity pool reserves
+        pool.coin_a_balance += *max_coin_a_in;
+        pool.coin_b_balance -= optimal_amount_coin_b_out;
+
+        // Return the amount of CoinB received
+        return optimal_amount_coin_b_out;
     }   
 
     /*
@@ -330,7 +442,24 @@ module overmind::liquidity_pool {
         pool: &mut LiquidityPool<CoinA, CoinB>,
         ctx: &mut TxContext
     ): Coin<CoinA> {
-        
+        // Placeholder logic for swapping CoinB for exact CoinA
+        assert(*max_coin_b_in > 0, 0x2);
+
+        // Calculate optimal amount of CoinA to receive
+        let optimal_amount_coin_a_out = pool.coin_a_balance * max_coin_b_in / pool.coin_b_balance;
+
+        // Ensure slippage is within acceptable limits
+        assert(
+            optimal_amount_coin_a_out <= amount_coin_a_out,
+            ESlippageLimitExceeded
+        );
+
+        // Update liquidity pool reserves
+        pool.coin_b_balance += *max_coin_b_in;
+        pool.coin_a_balance -= optimal_amount_coin_a_out;
+
+        // Return the amount of CoinA received
+        return optimal_amount_coin_a_out;
     }
 
     //==============================================================================================
